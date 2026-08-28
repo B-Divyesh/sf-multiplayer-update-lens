@@ -53,7 +53,7 @@ stop(); // restores the original adapter method
 
 ### WebSocket (`ws`)
 
-Provide the room and room-size lookup used by your game. Each server-side `send` is counted without capturing its payload.
+Provide the room lookup used by your game. Each server-side `send` is counted as one recipient without capturing its payload; the enclosing tick supplies room size.
 
 ```ts
 import { createProbe, instrumentWebSocketServer } from "multiplayer-update-lens";
@@ -61,7 +61,6 @@ import { createProbe, instrumentWebSocketServer } from "multiplayer-update-lens"
 const lens = createProbe();
 const stop = instrumentWebSocketServer(wss, lens, {
   roomOf: (client) => client.roomId,
-  roomSize: (roomId) => rooms.get(roomId)?.size ?? 0,
 });
 ```
 

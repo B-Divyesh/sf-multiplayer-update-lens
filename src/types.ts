@@ -67,5 +67,4 @@ export interface SocketIOAdapterOptions {
 
 export interface WebSocketAdapterOptions<Client = unknown> {
   roomOf(client: Client): string | undefined;
-  roomSize?: (roomId: string) => number;
 }

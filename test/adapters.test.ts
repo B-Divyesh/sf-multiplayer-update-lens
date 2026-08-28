@@ -34,12 +34,11 @@ describe("WebSocket adapter", () => {
     const lens = createProbe({ redactRoomIds: false });
     const stop = instrumentWebSocketServer(server, lens, {
       roomOf: (socket) => socket.roomId,
-      roomSize: () => 12,
     });
 
     expect(client.send("hello")).toBe("sent");
     expect(originalSend).toHaveBeenCalledWith("hello");
-    expect(lens.snapshot().samples[0]).toMatchObject({ room: "arena", bytes: 5, recipients: 12, fanout: 12 });
+    expect(lens.snapshot().samples[0]).toMatchObject({ room: "arena", bytes: 5, recipients: 1, fanout: 1 });
     stop();
     expect(client.send).toBe(originalSend);
     expect(server.listenerCount("connection")).toBe(0);

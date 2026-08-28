@@ -49,8 +49,7 @@ export function instrumentWebSocketServer<Client extends { send: AnyFunction }>(
     originals.set(client, original);
     client.send = function (this: Client, data: unknown, ...args: unknown[]): unknown {
       const room = options.roomOf(client) ?? "__unassigned__";
-      const recipients = options.roomSize?.(room) ?? 1;
-      probe.recordOutbound(room, { bytes: estimateBytes(data), messages: 1, recipients });
+      probe.recordOutbound(room, { bytes: estimateBytes(data), messages: 1, recipients: 1 });
       return original.call(this, data, ...args);
     };
   };
