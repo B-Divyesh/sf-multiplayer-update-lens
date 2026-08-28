@@ -101,7 +101,9 @@ npm pack --dry-run
 Deploy `dist/site` to the configured static host. The included
 `staticwebapp.config.json` gives content-hashed `/assets/*` files a one-year
 immutable cache lifetime, while HTML and `sw.js` retain a short revalidating
-policy so releases and offline updates become visible promptly.
+policy so releases and offline updates become visible promptly. The service
+worker uses network-first navigation with a cached offline fallback, so an
+already-installed worker cannot hold a client on an earlier HTML deployment.
 
 ## Privacy and scope
 

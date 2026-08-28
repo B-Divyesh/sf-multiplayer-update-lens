@@ -1,6 +1,7 @@
 import { createProbe } from "../../src/probe";
 import { summarizeRooms } from "../../src/report";
 import type { TickTrace } from "../../src/types";
+import { validateTrace } from "./trace-validation";
 
 const PRODUCT_SLUG = "multiplayer-update-lens";
 const BILLING_BASE = document.documentElement.dataset.billingBase ?? "https://api.sociobot.in";
@@ -174,13 +175,13 @@ async function importTraces(files: FileList | null): Promise<void> {
   error.hidden = true;
   const saved = getSavedTraces();
   try {
+    const imported: SavedTrace[] = [];
     for (const file of [...files]) {
       const text = await file.text();
       const trace = parseTrace(text, file.type);
-      if (trace.schema !== "ticklens-trace" || !Array.isArray(trace.samples)) throw new Error(`${file.name} is not a TickLens report.`);
-      saved.unshift({ id: crypto.randomUUID(), name: file.name.replace(/\.(html|json)$/i, ""), importedAt: new Date().toISOString(), trace });
+      imported.push({ id: crypto.randomUUID(), name: file.name.replace(/\.(html|json)$/i, ""), importedAt: new Date().toISOString(), trace });
     }
-    localStorage.setItem(TRACE_KEY, JSON.stringify(saved.slice(0, 30)));
+    localStorage.setItem(TRACE_KEY, JSON.stringify([...imported.reverse(), ...saved].slice(0, 30)));
     toast(`${files.length} report${files.length === 1 ? "" : "s"} added locally.`);
     renderLibrary();
   } catch (cause) {
@@ -192,11 +193,11 @@ async function importTraces(files: FileList | null): Promise<void> {
 }
 
 function parseTrace(text: string, type: string): TickTrace {
-  if (type.includes("json") || text.trimStart().startsWith("{")) return JSON.parse(text) as TickTrace;
+  if (type.includes("json") || text.trimStart().startsWith("{")) return validateTrace(JSON.parse(text));
   const document = new DOMParser().parseFromString(text, "text/html");
   const data = document.getElementById("ticklens-data")?.textContent;
   if (!data) throw new Error("This HTML file does not contain embedded TickLens trace data.");
-  return JSON.parse(data) as TickTrace;
+  return validateTrace(JSON.parse(data));
 }
 
 function renderLibrary(): void {
@@ -242,7 +243,30 @@ function renderComparison(items: SavedTrace[]): void {
 }
 
 function getSavedTraces(): SavedTrace[] {
-  return readJson<SavedTrace[]>(localStorage.getItem(TRACE_KEY)) ?? [];
+  const serialized = localStorage.getItem(TRACE_KEY);
+  const raw = readJson<unknown>(serialized);
+  if (!Array.isArray(raw)) {
+    if (serialized !== null) localStorage.removeItem(TRACE_KEY);
+    return [];
+  }
+  const valid = raw.filter(isSavedTrace);
+  if (valid.length !== raw.length) {
+    if (valid.length) localStorage.setItem(TRACE_KEY, JSON.stringify(valid));
+    else localStorage.removeItem(TRACE_KEY);
+  }
+  return valid;
+}
+
+function isSavedTrace(value: unknown): value is SavedTrace {
+  if (!value || typeof value !== "object") return false;
+  const saved = value as Partial<SavedTrace>;
+  if (typeof saved.id !== "string" || typeof saved.name !== "string" || typeof saved.importedAt !== "string" || !Number.isFinite(Date.parse(saved.importedAt))) return false;
+  try {
+    validateTrace(saved.trace);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function readJson<T>(value: string | null): T | undefined {
