@@ -27,6 +27,18 @@ try {
   if (overflow) throw new Error("Home page has horizontal overflow at 390px");
   await context.close();
 
+  const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const desktopPage = await desktopContext.newPage();
+  await desktopPage.goto(baseUrl, { waitUntil: "networkidle" });
+  await desktopPage.keyboard.press("Tab");
+  if (!await desktopPage.locator(".skip-link").evaluate((element) => element === document.activeElement)) {
+    throw new Error("Skip link is not the first desktop keyboard target");
+  }
+  await desktopPage.getByRole("button", { name: "Run 500-client sample" }).focus();
+  await desktopPage.keyboard.press("Enter");
+  await desktopPage.getByText("marsh-260", { exact: true }).first().waitFor();
+  await desktopContext.close();
+
   const paidContext = await browser.newContext();
   await paidContext.route("https://api.sociobot.in/api/v1/products/multiplayer-update-lens/verify**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: null }) }));
   const paidPage = await paidContext.newPage();
@@ -41,7 +53,7 @@ try {
   ]);
   await paidPage.getByText("Newest vs previous").waitFor();
   await paidContext.close();
-  console.log("Site accessibility, console, seeded sample, paid unlock/import, and 390px layout checks passed.");
+  console.log("Site accessibility, console, keyboard, seeded sample, paid unlock/import, and 390px layout checks passed.");
 } finally {
   await browser.close();
 }

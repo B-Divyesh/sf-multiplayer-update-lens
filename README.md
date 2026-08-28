@@ -96,6 +96,13 @@ npm pack --dry-run
 - `npm run dev` runs the documentation/demo site.
 - `npm test` runs the documented examples and core/adapter/report tests.
 
+### Static-site deployment
+
+Deploy `dist/site` to the configured static host. The included
+`staticwebapp.config.json` gives content-hashed `/assets/*` files a one-year
+immutable cache lifetime, while HTML and `sw.js` retain a short revalidating
+policy so releases and offline updates become visible promptly.
+
 ## Privacy and scope
 
 TickLens has no telemetry and makes no network requests. Traces stay in memory until your code exports them. Payload bodies are never stored. The documentation site's optional Field Kit stores a license and saved comparisons in your browser only; see the site’s privacy and terms pages.
