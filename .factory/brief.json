@@ -1,0 +1,30 @@
+{
+  "slug": "multiplayer-update-lens",
+  "title": "TickLens",
+  "territory": "games-creative",
+  "user": "Indie browser-game developers trying to find why room updates lag long before CPU appears saturated.",
+  "evidence": [
+    {
+      "url": "https://news.ycombinator.com/item?id=44389408",
+      "date": "2025-06-26",
+      "quote_or_summary": "A Node/Socket.IO game developer sees lag at 500 players despite low CPU; replies point to I/O throughput and accidentally quadratic outbound updates."
+    },
+    {
+      "url": "https://github.com/godotengine/godot/issues/75781",
+      "date": "2023-04-07",
+      "quote_or_summary": "A multiplayer user needs separate server/client paths and encounters authority errors, showing that state topology becomes hard to see as games grow."
+    }
+  ],
+  "recurrence": "A current production-scale report and ongoing engine-level multiplayer complexity point to a visibility gap rather than a mere framework choice.",
+  "current_workaround": "Add ad-hoc logs, inspect CPU dashboards, or guess at Socket.IO traffic patterns.",
+  "incumbents_and_gap": "Datadog and OpenTelemetry are infrastructure-first; game engines expose state but do not make per-room fanout and tick cost legible.",
+  "smallest_useful_product": "Drop-in JS client/server probe that records tick duration, room size, bytes/messages per room, and emits a self-contained HTML trace. Non-goals: hosting, matchmaking, packet capture, engine lock-in.",
+  "success_measure": "In a seeded 500-client test, users identify the highest fanout room from the report in under five minutes.",
+  "artifact_class": "library-npm",
+  "monetization": "freemium — open local reports build trust; paid team retention/compare reports can fund it.",
+  "constraints": "No payload capture by default; redact IDs; overhead budget under 2%; Socket.IO/WebSocket adapters initially only.",
+  "est_build_effort": "M",
+  "why_distinct": "It diagnoses game-state fanout, not generic server performance.",
+  "confidence": 4,
+  "state": "RESEARCHED"
+}

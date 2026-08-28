@@ -7,7 +7,7 @@ It is designed for Node.js game servers using Socket.IO or `ws`, and also works 
 ## Install
 
 ```sh
-npm install ticklens
+npm install multiplayer-update-lens
 ```
 
 TickLens ships ESM, CommonJS, and TypeScript declarations. It requires Node 18 or newer.
@@ -17,7 +17,7 @@ TickLens ships ESM, CommonJS, and TypeScript declarations. It requires Node 18 o
 Wrap the work for each room, and count outbound updates where you send them:
 
 ```ts
-import { createProbe, writeReport } from "ticklens";
+import { createProbe, writeReport } from "multiplayer-update-lens";
 
 const lens = createProbe({ serverName: "eu-west-1" });
 
@@ -41,7 +41,7 @@ Room IDs are replaced with stable session-scoped labels such as `room-a13f2c` by
 The adapter observes adapter broadcasts and estimates encoded packet size. It does not inspect or store packet contents.
 
 ```ts
-import { createProbe, instrumentSocketIO, writeReport } from "ticklens";
+import { createProbe, instrumentSocketIO, writeReport } from "multiplayer-update-lens";
 
 const lens = createProbe();
 const stop = instrumentSocketIO(io, lens);
@@ -56,7 +56,7 @@ stop(); // restores the original adapter method
 Provide the room and room-size lookup used by your game. Each server-side `send` is counted without capturing its payload.
 
 ```ts
-import { createProbe, instrumentWebSocketServer } from "ticklens";
+import { createProbe, instrumentWebSocketServer } from "multiplayer-update-lens";
 
 const lens = createProbe();
 const stop = instrumentWebSocketServer(wss, lens, {

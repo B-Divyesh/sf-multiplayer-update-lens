@@ -1,0 +1,61 @@
+{
+  "name": "multiplayer-update-lens",
+  "version": "0.1.0",
+  "description": "Find multiplayer room fanout before it becomes visible as CPU saturation.",
+  "license": "MIT",
+  "author": "Sociobot (Param Factory)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.cjs",
+    "dist/index.d.ts",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
+  "scripts": {
+    "dev": "vite --config site/vite.config.ts",
+    "build:lib": "tsup",
+    "build:site": "vite build --config site/vite.config.ts",
+    "build": "npm run build:lib && npm run build:site",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:site": "node test/site-accessibility.mjs",
+    "check": "tsc --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@types/node": "^24.3.0",
+    "jsdom": "^26.1.0",
+    "playwright": "1.58.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "multiplayer",
+    "socket.io",
+    "websocket",
+    "profiler",
+    "game-server"
+  ]
+}
