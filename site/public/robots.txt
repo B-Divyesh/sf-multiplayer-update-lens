@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://multiplayer-update-lens.sociobot.in/sitemap.xml

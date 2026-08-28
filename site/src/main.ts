@@ -1,0 +1,271 @@
+import { createProbe } from "../../src/probe";
+import { summarizeRooms } from "../../src/report";
+import type { TickTrace } from "../../src/types";
+
+const PRODUCT_SLUG = "multiplayer-update-lens";
+const BILLING_BASE = document.documentElement.dataset.billingBase ?? "https://api.sociobot.in";
+const LICENSE_KEY = `sb_license:${PRODUCT_SLUG}`;
+const VERDICT_KEY = `${LICENSE_KEY}:verdict`;
+const TRACE_KEY = "ticklens:field-kit:traces";
+const DAY = 86_400_000;
+
+type SavedTrace = { id: string; name: string; importedAt: string; trace: TickTrace };
+type Verdict = { valid: boolean; checkedAt: number; reason?: string };
+
+const byId = <T extends HTMLElement>(id: string): T => {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Missing #${id}`);
+  return element as T;
+};
+
+const sampleReport = byId("sample-report");
+const sampleEmpty = byId("sample-empty");
+const sampleLoading = byId("sample-loading");
+let sampleHtml = "";
+
+for (const button of document.querySelectorAll<HTMLElement>("#run-sample, [data-run-sample]")) {
+  button.addEventListener("click", () => void runSample());
+}
+
+async function runSample(): Promise<void> {
+  sampleEmpty.hidden = true;
+  sampleReport.hidden = true;
+  sampleLoading.hidden = false;
+  for (const button of document.querySelectorAll<HTMLButtonElement>("#run-sample, [data-run-sample]")) button.disabled = true;
+  await new Promise((resolve) => window.setTimeout(resolve, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 280));
+
+  let clock = 0;
+  const lens = createProbe({ serverName: "Seeded 500-client grove", redactRoomIds: false, clock: () => clock });
+  const rooms = [
+    { name: "atrium-46", size: 46, ms: 2.2, messages: 1, bytes: 340 },
+    { name: "canopy-74", size: 74, ms: 3.1, messages: 2, bytes: 410 },
+    { name: "estuary-80", size: 80, ms: 3.5, messages: 1, bytes: 620 },
+    { name: "marsh-260", size: 260, ms: 7.4, messages: 260, bytes: 96 },
+    { name: "nursery-40", size: 40, ms: 1.8, messages: 3, bytes: 260 },
+  ];
+  for (let tick = 0; tick < 24; tick += 1) {
+    for (const room of rooms) {
+      const end = lens.startTick(room.name, { roomSize: room.size, timestamp: Date.now() + tick * 50 });
+      lens.recordOutbound(room.name, { bytes: room.bytes, messages: room.messages, recipients: room.size });
+      clock += room.ms + (tick % 4) * 0.12;
+      end();
+    }
+  }
+  const trace = lens.snapshot();
+  const summaries = summarizeRooms(trace.samples);
+  const top = summaries[0];
+  if (!top) return;
+  sampleHtml = lens.toHTML({ title: "Seeded 500-client trace" });
+  sampleReport.innerHTML = `
+    <div class="finding-card"><div><span class="tag">Highest fanout</span><h3>${escapeHtml(top.room)}</h3><p>The 260-player room broadcasts one update per player to the whole room. Start with its nested send loop.</p></div><div class="finding-number">${format(top.fanout)}<small>recipient sends</small></div></div>
+    <div class="table-scroll" tabindex="0" aria-label="Seeded room measurements"><table class="data-table"><caption>120 sampled ticks, sorted by total fanout</caption><thead><tr><th scope="col">Room</th><th scope="col">Players</th><th scope="col">p95 tick</th><th scope="col">Messages</th><th scope="col">Fanout</th><th scope="col">Est. wire</th></tr></thead><tbody>${summaries.map((room) => `<tr><th scope="row">${escapeHtml(room.room)}</th><td>${room.roomSize}</td><td>${room.p95Ms.toFixed(2)} ms</td><td>${format(room.messages)}</td><td><strong>${format(room.fanout)}</strong></td><td>${formatBytes(room.wireBytes)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="report-actions"><button id="download-sample" class="button primary" type="button">Download self-contained report</button><button class="button secondary" type="button" data-run-sample>Run sample again</button></div>`;
+  sampleLoading.hidden = true;
+  sampleReport.hidden = false;
+  for (const button of document.querySelectorAll<HTMLButtonElement>("#run-sample")) button.disabled = false;
+  byId("download-sample").addEventListener("click", downloadSample);
+  sampleReport.querySelector<HTMLElement>("[data-run-sample]")?.addEventListener("click", () => void runSample());
+}
+
+function downloadSample(): void {
+  const url = URL.createObjectURL(new Blob([sampleHtml], { type: "text/html" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "ticklens-seeded-trace.html";
+  anchor.click();
+  URL.revokeObjectURL(url);
+  toast("Report downloaded. It opens offline in any browser.");
+}
+
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy], [data-copy-target]")) {
+  button.addEventListener("click", async () => {
+    const target = button.dataset.copyTarget ? document.getElementById(button.dataset.copyTarget)?.textContent : undefined;
+    const value = button.dataset.copy ?? target ?? "";
+    try {
+      await navigator.clipboard.writeText(value);
+      toast("Copied to clipboard.");
+    } catch {
+      toast("Clipboard access was blocked. Select the text and copy it manually.");
+    }
+  });
+}
+
+const connection = byId("connection-status");
+function updateConnection(): void {
+  connection.hidden = navigator.onLine;
+  connection.textContent = navigator.onLine ? "" : "You’re offline. The sample and saved traces still work; license checks will resume when connected.";
+}
+window.addEventListener("online", updateConnection);
+window.addEventListener("offline", updateConnection);
+updateConnection();
+
+const licenseState = byId("license-state");
+const licenseForm = byId<HTMLFormElement>("license-form");
+const licenseInput = byId<HTMLInputElement>("license-input");
+const traceUpload = byId<HTMLInputElement>("trace-upload");
+const uploadButton = document.querySelector<HTMLElement>(".upload-button");
+let unlocked = false;
+
+licenseForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const token = licenseInput.value.trim();
+  if (!token) return;
+  localStorage.setItem(LICENSE_KEY, token);
+  localStorage.removeItem(VERDICT_KEY);
+  licenseInput.value = "";
+  void verifyLicense(token, true);
+});
+
+traceUpload.addEventListener("change", () => void importTraces(traceUpload.files));
+
+async function initializeLicense(): Promise<void> {
+  const url = new URL(location.href);
+  const returnedLicense = url.searchParams.get("license");
+  if (returnedLicense) {
+    localStorage.setItem(LICENSE_KEY, returnedLicense);
+    localStorage.removeItem(VERDICT_KEY);
+    url.searchParams.delete("license");
+    history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  const token = returnedLicense ?? localStorage.getItem(LICENSE_KEY);
+  if (!token) {
+    setUnlocked(false, "Free edition · reports are fully enabled");
+    return;
+  }
+  const cached = readJson<Verdict>(localStorage.getItem(VERDICT_KEY));
+  if (cached?.valid) setUnlocked(true, "Field Kit active · using the saved license");
+  if (cached && Date.now() - cached.checkedAt < DAY) {
+    if (!cached.valid) setUnlocked(false, "License no longer active. Restore another license or purchase Field Kit.", "error");
+    return;
+  }
+  await verifyLicense(token, false);
+}
+
+async function verifyLicense(token: string, requested: boolean): Promise<void> {
+  licenseState.className = "license-state warning";
+  licenseState.textContent = "Checking the license…";
+  try {
+    const response = await fetch(`${BILLING_BASE}/api/v1/products/${PRODUCT_SLUG}/verify?license=${encodeURIComponent(token)}`, { headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error(`Verification returned ${response.status}`);
+    const result = await response.json() as { valid: boolean; reason?: string };
+    localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: result.valid, reason: result.reason, checkedAt: Date.now() }));
+    if (result.valid) setUnlocked(true, "Field Kit active · local retention and compare unlocked");
+    else setUnlocked(false, "License no longer active. Restore another license or purchase Field Kit.", "error");
+  } catch {
+    const cached = readJson<Verdict>(localStorage.getItem(VERDICT_KEY));
+    if (cached?.valid) setUnlocked(true, "Offline · Field Kit remains active from the cached verification", "warning");
+    else setUnlocked(false, requested ? "We couldn’t verify that license. Check your connection and try again." : "License check is unavailable. Free reports still work.", "warning");
+  }
+}
+
+function setUnlocked(value: boolean, message: string, tone = ""): void {
+  unlocked = value;
+  licenseState.className = `license-state ${tone}`.trim();
+  licenseState.textContent = message;
+  traceUpload.disabled = !value;
+  uploadButton?.setAttribute("aria-disabled", String(!value));
+  byId("library-help").textContent = value ? "Reports stay on this device. Import the self-contained HTML file produced by TickLens." : "Unlock Field Kit to retain and compare exported reports in this browser.";
+  renderLibrary();
+}
+
+async function importTraces(files: FileList | null): Promise<void> {
+  if (!unlocked || !files?.length) return;
+  const error = byId("library-error");
+  error.hidden = true;
+  const saved = getSavedTraces();
+  try {
+    for (const file of [...files]) {
+      const text = await file.text();
+      const trace = parseTrace(text, file.type);
+      if (trace.schema !== "ticklens-trace" || !Array.isArray(trace.samples)) throw new Error(`${file.name} is not a TickLens report.`);
+      saved.unshift({ id: crypto.randomUUID(), name: file.name.replace(/\.(html|json)$/i, ""), importedAt: new Date().toISOString(), trace });
+    }
+    localStorage.setItem(TRACE_KEY, JSON.stringify(saved.slice(0, 30)));
+    toast(`${files.length} report${files.length === 1 ? "" : "s"} added locally.`);
+    renderLibrary();
+  } catch (cause) {
+    error.textContent = cause instanceof Error ? cause.message : "That report could not be read.";
+    error.hidden = false;
+  } finally {
+    traceUpload.value = "";
+  }
+}
+
+function parseTrace(text: string, type: string): TickTrace {
+  if (type.includes("json") || text.trimStart().startsWith("{")) return JSON.parse(text) as TickTrace;
+  const document = new DOMParser().parseFromString(text, "text/html");
+  const data = document.getElementById("ticklens-data")?.textContent;
+  if (!data) throw new Error("This HTML file does not contain embedded TickLens trace data.");
+  return JSON.parse(data) as TickTrace;
+}
+
+function renderLibrary(): void {
+  const container = byId("saved-traces");
+  const comparison = byId("comparison");
+  if (!unlocked) {
+    container.innerHTML = "";
+    comparison.hidden = true;
+    return;
+  }
+  const saved = getSavedTraces();
+  if (!saved.length) {
+    container.innerHTML = '<div class="empty-state"><p>No saved reports on this device.</p><span>Use “Add report” to begin a local comparison.</span></div>';
+    comparison.hidden = true;
+    return;
+  }
+  container.innerHTML = saved.map((item) => `<div class="trace-item"><div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.trace.serverName ?? "Local trace")} · ${new Date(item.importedAt).toLocaleDateString()}</span></div><button class="remove-button" type="button" data-remove="${item.id}" aria-label="Remove ${escapeHtml(item.name)}">Remove</button></div>`).join("");
+  for (const button of container.querySelectorAll<HTMLButtonElement>("[data-remove]")) {
+    button.addEventListener("click", () => {
+      const item = saved.find((entry) => entry.id === button.dataset.remove);
+      if (!item || !confirm(`Remove “${item.name}” from this device?`)) return;
+      localStorage.setItem(TRACE_KEY, JSON.stringify(saved.filter((entry) => entry.id !== item.id)));
+      renderLibrary();
+    });
+  }
+  renderComparison(saved.slice(0, 2));
+}
+
+function renderComparison(items: SavedTrace[]): void {
+  const comparison = byId("comparison");
+  if (items.length < 2) {
+    comparison.hidden = false;
+    comparison.innerHTML = "<h3>Comparison</h3><p>Add one more report to compare the two newest captures.</p>";
+    return;
+  }
+  const [newest, previous] = items;
+  if (!newest || !previous) return;
+  const currentTop = summarizeRooms(newest.trace.samples)[0];
+  const oldTop = summarizeRooms(previous.trace.samples)[0];
+  const delta = (currentTop?.fanout ?? 0) - (oldTop?.fanout ?? 0);
+  comparison.hidden = false;
+  comparison.innerHTML = `<p class="specimen-index">Newest vs previous</p><h3>${escapeHtml(newest.name)} / ${escapeHtml(previous.name)}</h3><p>Highest-room fanout changed by <span class="${delta > 0 ? "delta-up" : "delta-down"}">${delta > 0 ? "+" : ""}${format(delta)}</span>.</p><div class="table-scroll" tabindex="0" aria-label="Newest and previous report comparison"><table class="data-table"><thead><tr><th>Report</th><th>Top room</th><th>Fanout</th><th>p95 tick</th></tr></thead><tbody><tr><th>${escapeHtml(newest.name)}</th><td>${escapeHtml(currentTop?.room ?? "No samples")}</td><td>${format(currentTop?.fanout ?? 0)}</td><td>${(currentTop?.p95Ms ?? 0).toFixed(2)} ms</td></tr><tr><th>${escapeHtml(previous.name)}</th><td>${escapeHtml(oldTop?.room ?? "No samples")}</td><td>${format(oldTop?.fanout ?? 0)}</td><td>${(oldTop?.p95Ms ?? 0).toFixed(2)} ms</td></tr></tbody></table></div>`;
+}
+
+function getSavedTraces(): SavedTrace[] {
+  return readJson<SavedTrace[]>(localStorage.getItem(TRACE_KEY)) ?? [];
+}
+
+function readJson<T>(value: string | null): T | undefined {
+  if (!value) return undefined;
+  try { return JSON.parse(value) as T; } catch { return undefined; }
+}
+
+function toast(message: string): void {
+  const element = byId("toast");
+  element.textContent = message;
+  element.hidden = false;
+  window.setTimeout(() => { element.hidden = true; }, 2800);
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
+}
+
+function format(value: number): string { return Math.round(value).toLocaleString("en-US"); }
+function formatBytes(bytes: number): string { return bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 ** 2).toFixed(1)} MB`; }
+
+void initializeLicense();
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => { void navigator.serviceWorker.register("/sw.js"); });
+}
