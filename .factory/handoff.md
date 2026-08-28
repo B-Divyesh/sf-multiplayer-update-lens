@@ -1,95 +1,75 @@
-# TickLens repair handoff
+# TickLens verification handoff
 
 ## Release status
 
-**PASS — deployed repair:** `ba26e16c517c6f74b73d5a0193a57d7529ae9394`
+**FAIL — do not release candidate
+`04dbc2dc08f172bc439db40d0da3f9c4947126c1`.**
 
-The independent verifier's sole release blocker was repaired and verified live:
-content-hashed Vite JS and CSS are now immutable-cached for one year, while
-HTML and `sw.js` remain short-lived and revalidating. The product remains a
-TypeScript npm library (ESM, CommonJS, and declarations) with its static
-documentation/demo site at `https://multiplayer-update-lens.sociobot.in/`.
+Independent verification on 2026-08-28 found three acceptance blockers. Full
+evidence and reproduction details are in `.factory/verification-2.md`.
 
-## What changed
+## Blocking defects
 
-- Added the Azure Static Web Apps route header for `/assets/*`:
-  `Cache-Control: public, max-age=31536000, immutable`.
-- Made the intended shell policy explicit in `globalHeaders`:
-  `Cache-Control: public, max-age=30, must-revalidate`. This applies to
-  `index.html` and `sw.js`; the asset route overrides it for hashed assets.
-- Added exact unit regression coverage for both header values and the `/assets/*`
-  route override.
-- Extended browser regression coverage with desktop keyboard activation, an
-  offline service-worker reload, and a same-origin-only request assertion for
-  the free home, privacy, and terms pages.
-- Documented the static deployment cache contract in the README.
+1. **High — service-worker updates are stuck.** The worker serves cached `/`
+   first from fixed cache `ticklens-shell-v1`. If a later deploy changes the
+   app but not the static worker bytes, `registration.update()` installs
+   nothing and online reload continues to render the old deployment. A
+   controlled two-deployment test rendered `v1` after the origin was serving
+   `v2`.
+2. **Medium — corrupt trace shapes persist and break later loads.** Two
+   schema-labeled traces with nonnumeric duration values were written to local
+   storage before rendering failed. Reload then emitted an uncaught
+   `.toFixed is not a function` page error.
+3. **Medium — paid report upload has invisible keyboard focus.** The enabled
+   file input receives focus and a 3 px outline, but both are clipped with
+   `clip-path: inset(50%)`; the visible “Add report” label has no focus ring.
 
-## Verification evidence
+The live host also returns a soft HTTP 200 for unknown routes and does not set
+CSP/`frame-ancestors`; these are noted as non-blocking hardening items.
 
-Run in a clean dependency install on 2026-08-28:
+## What passed
+
+- Clean `npm ci`, 13/13 unit/integration tests, strict TypeScript, exact
+  production build, site browser suite, pack dry run, and 0-vulnerability
+  audit.
+- The 11.3 kB tarball works in clean ESM/CommonJS consumers on Node 18 and 22;
+  packed declarations compile under strict NodeNext TypeScript.
+- Real Socket.IO and `ws` integration, teardown, 500-player highest-fanout
+  ranking, report generation, redaction/payload privacy, boundaries, errors,
+  recovery, empty state, and retention cap passed.
+- Median instrumentation cost was 0.488 µs per complete measured cycle,
+  0.00293% of a 16.667 ms tick.
+- Current live files match the candidate build byte-for-byte. The prior cache
+  failure is fixed: hashed JS/CSS are immutable for one year; shell and worker
+  revalidate after 30 seconds.
+- Live desktop and 390 px audits found no overflow, no free-session third-party
+  requests, no console/page errors, and zero axe violations on home, privacy,
+  and terms. Reduced motion and the current-release offline reload/sample pass.
+- Live Lighthouse: 100 Performance / 100 Accessibility / 100 Best Practices /
+  100 SEO; LCP 1.7 s, CLS 0, TBT 0 ms. JS/CSS/images are within budget.
+
+## Commands used
 
 ```sh
 npm ci
+npm audit --audit-level=low
 npm test
 npm run check
 npm run build
-TICKLENS_TEST_URL=http://127.0.0.1:5173 npm run test:site
-npm pack --dry-run
-npm audit --audit-level=low
+npm run pack:check
+TICKLENS_TEST_URL=http://127.0.0.1:4173 npm run test:site
+npm pack
 ```
 
-- `npm ci`: passed (128 audited packages; 0 vulnerabilities).
-- `npm test`: 3 files / 13 tests passed, including the two exact deployment
-  cache-policy tests.
-- `npm run check`: strict TypeScript passed.
-- `npm run build`: passed; library ESM/CJS/declaration files and `dist/site/`
-  created. Site JS is 19.95 kB (8.22 kB gzip); CSS is 13.64 kB (3.90 kB gzip).
-- `npm pack --dry-run`: passed; seven publish files, 11.3 kB tarball and
-  47.5 kB unpacked. An actual packed tarball was installed in a clean temporary
-  consumer: documented ESM and CommonJS import smoke tests both passed.
-- `npm audit --audit-level=low`: 0 vulnerabilities.
-- `npm run test:site`: passed with zero axe violations and zero console errors
-  on home, privacy, and terms at 390px; no horizontal overflow; no third-party
-  requests in free sessions; desktop Tab reaches the skip link and Enter runs
-  the 500-client sample; the sample identifies `marsh-260`; paid license/import
-  flows pass; an online reload followed by an offline service-worker reload
-  still renders the H1.
-- Lighthouse 12.8.2 against the deployed site (mobile defaults): Performance
-  100, Accessibility 100, Best Practices 100, SEO 100; LCP 1.7 s, CLS 0,
-  TBT 0 ms.
+The repository has no lint script. The npm package is ready to publish but was
+not published; the registry currently returns 404 and publishing remains the
+factory's responsibility.
 
-## Deployment and live verification
+## Required next steps
 
-Deployed the already-built `dist/site` using:
-
-```sh
-/opt/fleet/lib/deploy-static.sh multiplayer-update-lens dist/site
-```
-
-Azure Static Web Apps deployment ID: `53463634-69a4-4b93-ace4-0e5b6135735d`.
-The custom domain was Ready and HTTPS returned 200.
-
-Live response checks on `https://multiplayer-update-lens.sociobot.in/`:
-
-- `/assets/index-CUXn_gRh.js` and `/assets/styles-CxbZJ8Ep.css` each return
-  `Cache-Control: public, max-age=31536000, immutable`.
-- `/` and `/sw.js` each return
-  `Cache-Control: public, max-age=30, must-revalidate`.
-- HSTS, `X-Content-Type-Options: nosniff`,
-  `Referrer-Policy: strict-origin-when-cross-origin`, and the restrictive
-  camera/microphone/geolocation `Permissions-Policy` remain present.
-- Local production and live SHA-256 values match for `index.html`, `sw.js`,
-  `assets/index-CUXn_gRh.js`, and `assets/styles-CxbZJ8Ep.css`.
-- `/opt/fleet/lib/verify-url.sh` live smoke check passed: 911 ms load, no
-  page/console errors, title/lang present, exactly one H1, main landmark, no
-  missing image alt text, and no unlabeled buttons.
-
-## Notes and next steps
-
-- The repository is ready to publish but was not published; the factory owns
-  registry credentials. Release with `npm pack` (or the registry publishing
-  workflow) from this commit.
-- Socket.IO instrumentation remains per namespace and attaches to the adapter
-  present when called; initialize it for each dynamically replaced namespace.
-- Byte counts intentionally estimate application payload size and recipients;
-  they do not capture compression, framing, or payload contents.
+Repair all three blockers without weakening the passing privacy or cache
+policies. Add regression coverage for two sequential deployments under one
+service-worker registration, full trace-shape validation plus reload, and
+unlocked keyboard focus. Deploy the repair, then repeat the live identity,
+headers, offline, axe, error, and Lighthouse checks before changing status to
+PASS.
