@@ -31,6 +31,20 @@ try {
   await page.getByText("marsh-260", { exact: true }).first().waitFor();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (overflow) throw new Error("Home page has horizontal overflow at 390px");
+  const purchaseDisclosure = await page.locator(".merchant, .legal-copy").evaluateAll((elements) => elements.map((element) => ({
+    className: element.className,
+    fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+  })));
+  if (purchaseDisclosure.some(({ fontSize }) => fontSize < 16)) {
+    throw new Error(`Purchase disclosure text is smaller than 16px at 390px: ${JSON.stringify(purchaseDisclosure)}`);
+  }
+  const mobileLegalTargets = await page.locator(".legal-copy a, .site-footer nav a").evaluateAll((links) => links.map((link) => {
+    const box = link.getBoundingClientRect();
+    return { text: link.textContent?.trim(), width: box.width, height: box.height };
+  }));
+  if (mobileLegalTargets.some(({ width, height }) => width < 44 || height < 44)) {
+    throw new Error(`Legal links are smaller than 44x44px at 390px: ${JSON.stringify(mobileLegalTargets)}`);
+  }
   await context.close();
 
   const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -59,18 +73,45 @@ try {
   try {
     const updateContext = await browser.newContext();
     const updatePage = await updateContext.newPage();
+    const cdp = await updateContext.newCDPSession(updatePage);
+    await cdp.send("Network.enable");
+    await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
     await updatePage.goto(updateServer.origin, { waitUntil: "domcontentloaded" });
     await updatePage.evaluate(async () => {
       await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
     });
-    await updatePage.reload({ waitUntil: "domcontentloaded" });
+    await updatePage.reload({ waitUntil: "networkidle" });
     await updatePage.getByRole("heading", { name: "TickLens deployment v1" }).waitFor();
     await updatePage.waitForFunction(() => navigator.serviceWorker.controller !== null);
     updateServer.deploy("v2");
     await updatePage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
+    await updatePage.reload({ waitUntil: "networkidle" });
+    await updatePage.getByRole("heading", { name: "TickLens deployment v2" }).waitFor();
+    await updatePage.waitForFunction(() => document.documentElement.dataset.release === "v2");
+    await updatePage.waitForFunction(async () => {
+      const [html, script, style] = await Promise.all([
+        caches.match("/").then((response) => response?.text()),
+        caches.match("/assets/app-v2.js").then((response) => response?.text()),
+        caches.match("/assets/app-v2.css").then((response) => response?.text()),
+      ]);
+      return html?.includes("deployment v2") && script?.includes('release = "v2"') && style?.includes("release-v2");
+    });
+    const cachedV2 = await updatePage.evaluate(async () => {
+      const paths = ["/", "/assets/app-v2.js", "/assets/app-v2.css"];
+      const entries = await Promise.all(paths.map(async (path) => {
+        const response = await caches.match(path);
+        return [path, response ? await response.text() : null];
+      }));
+      return Object.fromEntries(entries);
+    });
+    if (!cachedV2["/"]?.includes("deployment v2") || !cachedV2["/assets/app-v2.js"]?.includes('release = "v2"') || !cachedV2["/assets/app-v2.css"]?.includes("release-v2")) {
+      throw new Error(`The online v2 deployment was not persisted completely: ${JSON.stringify(cachedV2)}`);
+    }
+    await updateContext.setOffline(true);
     await updatePage.reload({ waitUntil: "domcontentloaded" });
     await updatePage.getByRole("heading", { name: "TickLens deployment v2" }).waitFor();
+    await updatePage.waitForFunction(() => document.documentElement.dataset.release === "v2");
     await updateContext.close();
   } finally {
     await updateServer.close();
@@ -134,8 +175,18 @@ async function startUpdateServer() {
       return;
     }
     if (pathname === "/") {
-      response.writeHead(200, { "content-type": "text/html" });
-      response.end(`<!doctype html><html lang="en"><title>TickLens update check</title><body><h1>TickLens deployment ${marker}</h1></body></html>`);
+      response.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
+      response.end(`<!doctype html><html lang="en"><head><title>TickLens update check</title><link rel="stylesheet" href="/assets/app-${marker}.css"></head><body><h1>TickLens deployment ${marker}</h1><script src="/assets/app-${marker}.js"></script></body></html>`);
+      return;
+    }
+    if (pathname === `/assets/app-${marker}.js`) {
+      response.writeHead(200, { "content-type": "application/javascript", "cache-control": "no-store" });
+      response.end(`document.documentElement.dataset.release = "${marker}";`);
+      return;
+    }
+    if (pathname === `/assets/app-${marker}.css`) {
+      response.writeHead(200, { "content-type": "text/css", "cache-control": "no-store" });
+      response.end(`:root { --release-${marker}: 1; } /* release-${marker} */`);
       return;
     }
     response.writeHead(200, { "content-type": pathname.endsWith(".webp") ? "image/webp" : "text/html" });
