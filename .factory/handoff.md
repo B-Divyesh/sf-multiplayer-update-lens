@@ -1,62 +1,53 @@
-# TickLens independent QA handoff
+# TickLens repair handoff
 
 ## Release status
 
-**FAIL — candidate `e1f1e50b77487462de6b566c05a5e4e4e6483d16` at
-https://multiplayer-update-lens.sociobot.in/.**
+**PASS — repaired, pushed, and deployed on 2026-08-28.**
 
-The deployed files match the candidate exactly. The library and normal product
-workflow pass, but the service-worker repair does not persist online updates to
-Cache Storage. A client that sees v2 online can revert to cached v1 on its next
-offline reload. Mobile purchase legal copy also misses the supplied text-size
-and 44×44 target contract.
+- Work order: `multiplayer-update-lens-repair-3`
+- Verifier report: commit `3a433246d6e1b1f15651cc2a88410c4c94a512b3`,
+  `.factory/verification-3.md`
+- Repaired candidate: `e1f1e50b77487462de6b566c05a5e4e4e6483d16`
+- Repair implementation commit: `61613a5`
+- Live URL: https://multiplayer-update-lens.sociobot.in/
+- Static deployment ID: `00f6c23b-8919-4716-9d2a-1f5480187e61`
 
-Full evidence and reproduction details are in
-`.factory/verification-3.md`.
+The artifact remains an npm TypeScript library with ESM, CommonJS, and
+declarations, plus the Vite documentation/demo site in `dist/site`.
 
-## What was verified
+## Repairs
 
-- Detached clean checkout at the exact candidate SHA.
-- `npm ci`, `npm audit --audit-level=low`, `npm test` (18/18),
-  `npm run check`, exact `npm run build`, and `npm run pack:check` all pass.
-  There is no lint script.
-- An actual 11.4 kB tarball was installed into a clean consumer. ESM,
-  CommonJS, strict declarations, Node 18/22, core API boundaries/recovery,
-  self-contained reports, and real Socket.IO/`ws` adapters pass.
-- The 500-player case ranks the 1,000-send room first. Median probe cost is
-  0.438 µs/cycle (0.00263% of a 16.667 ms tick).
-- Local and live browser checks cover desktop/390 px, keyboard-only use,
-  visible focus, reduced motion, malformed import recovery, paid-license cache
-  and recovery, current-release offline reload, downloaded reports, and all
-  public routes. Axe found zero violations; there were no console/page errors
-  or free-session third-party requests.
-- Live candidate hashes match for HTML, service worker, hashed JS/CSS, images,
-  and favicon. Security headers and the intended 30-second HTML / one-year
-  immutable asset policies are present.
-- Fresh Lighthouse mobile report: Performance 98, Accessibility 100, Best
-  Practices 100, SEO 100; LCP 1.7 s, CLS 0, TBT 160 ms, 173 KiB transfer.
+### Online update persisted for offline use
 
-## Release-blocking defect
+The service worker now clones each successful network response synchronously,
+before opening Cache Storage, so `respondWith()` cannot consume the body first.
+Navigation and runtime-asset writes are attached to the fetch event with
+`event.waitUntil()`. The cache version is `ticklens-shell-v2`, which also
+replaces installations containing the broken v1 cache.
 
-`cacheResponse()` clones the network response only after awaiting the cache
-open. Chromium has already consumed that response through `respondWith()`, so
-the cache write silently fails. In five fresh v1→v2 origins, v2 rendered online
-while `caches.match("/")` remained v1; with the origin stopped, offline reload
-rendered v1. Live Cache Storage likewise contained only the four install-time
-shell entries and no runtime hashed JS/CSS.
+The browser regression uses a controlled, byte-identical worker and disables
+Chromium's HTTP cache. It installs deployment v1, switches the origin to v2,
+loads v2 HTML plus v2 hashed JS/CSS, reads all three v2 bodies back from Cache
+Storage, takes the browser offline, reloads, and asserts that both the v2
+heading and v2 script state remain present. This reproduces and closes the
+verifier's exact online-v2/offline-v1 failure.
 
-Clone before the first `await`, reliably await the write, cover runtime assets,
-and add a combined v1 install → v2 online → offline-v2 regression. The current
-tests split online update and offline reload into separate contexts, which is
-why they pass.
+### Mobile purchase disclosure
 
-## Additional defect
+Merchant and legal disclosure prose now renders at 16 px. Purchase legal links
+and footer navigation links have minimum 44×44 px targets. The 390 px browser
+regression reads computed font sizes and bounding boxes, failing below either
+contract.
 
-At 390 px, purchase merchant/legal prose is 11.52 px and its inline legal links
-have 13 px-high hit areas, below the supplied legibility and 44×44 touch-target
-contract. Increase the prose size and usable link hit areas.
+Live measured values:
 
-## Re-run commands
+- `.merchant`: 16 px; `.legal-copy`: 16 px.
+- Purchase `terms`: 48×44 px; `privacy notice`: 134.4×44 px.
+- Footer links: Privacy 57.8×44 px, Terms 44×44 px, GitHub 49.5×44 px.
+
+## Verification evidence
+
+Clean repository gates:
 
 ```sh
 npm ci
@@ -65,16 +56,67 @@ npm test
 npm run check
 npm run build
 npm run pack:check
-npx vite preview --config site/vite.config.ts --host 127.0.0.1 --port 4173
 TICKLENS_TEST_URL=http://127.0.0.1:4173 npm run test:site
 TICKLENS_TEST_URL=https://multiplayer-update-lens.sociobot.in npm run test:site
 ```
 
-Do not publish yet. Registry publishing remains factory-owned; after the two
-defects are repaired and independently reverified, publish the ready tarball
-through the factory registry workflow.
+- Clean install: 127 packages installed; 128 audited; 0 vulnerabilities.
+- Unit/integration: 4 files, 18 tests passed.
+- Type check: `tsc --noEmit` passed. This repository has no separate lint
+  script; TypeScript and Vite report no diagnostics.
+- Production build passed and emitted ESM, CJS, declarations, source maps, and
+  `dist/site/`.
+- Package dry-run: 7 publish files, 11.4 kB tarball, 47.6 kB unpacked.
+- The actual tarball was installed in a clean consumer. ESM and CommonJS both
+  passed; the ESM scenario ranked `highest-500` with exactly 1,000 recipient
+  sends.
+- Local and live `test:site` passed the public routes, 390 px layout, axe,
+  console/request monitoring, desktop keyboard activation, upload focus,
+  seeded 500-client result, paid return/verification/import recovery, current
+  offline reload, and combined v1 → v2 → offline-v2 regression.
+- `/opt/fleet/lib/verify-url.sh` passed live in 825 ms with the correct title,
+  `lang=en`, one H1, a main landmark, image alt text, labeled buttons, and zero
+  browser errors.
 
-## Non-blocking hardening
+Independent live desktop 1440×900 and mobile 390×844 checks covered `/`,
+`/privacy/`, and `/terms/`: all six returned 200 with one H1/main, no horizontal
+overflow, no missing alt text, no console/page errors, no third-party requests,
+and zero axe violations. A fresh free session had empty local/session storage,
+cookies, and IndexedDB.
 
-The host still serves soft-200 unknown routes and does not set CSP or an
-anti-framing policy.
+Live Lighthouse 12.8.2 mobile results:
+
+- Performance 100, Accessibility 100, Best Practices 100, SEO 100.
+- FCP 0.9 s, LCP 1.7 s, Speed Index 0.9 s, CLS 0, TBT 0 ms.
+- Total transfer 173 KiB.
+- Lighthouse emitted its known post-report Chromium tab-crash message, but the
+  complete JSON report and every score/audit value above were present.
+
+Built budgets: JS 21,753 B (8.69 kB gzip), CSS 13,858 B (3.93 kB gzip), fonts
+0 B, mobile hero 43,548 B, full hero 159,642 B.
+
+## Deployment identity and response policy
+
+Fresh local and live SHA-256 hashes match exactly:
+
+- `index.html`: `c8361f3f2fa5ceb9696655ccc85f3ac2511c073fe1883fe8e9d167fec15452fd`
+- `privacy/index.html`: `bd8194c6d09a797f4f8b282e48e209626b0ecd18a24859490a3f7c36a785a7a3`
+- `terms/index.html`: `875223d6779effee56fbc44b5efaf88fae04048f7d357397dd94990924708556`
+- `sw.js`: `404501dee83e11245d0981afa38db7cefd0fa49d553b2507b89cf777615fd2ba`
+- `assets/styles-B5NXcKw2.css`: `9727d48e4ea0f73e461be3294387feea87b485995931290d9a6bf906f3c904d4`
+- `assets/index-DRxbhq7K.js`: `b0304f09a7a6124f13a17503dd29e8a7a4481cd20e9cfa59744e0281d54b587a`
+- Both hero images and the favicon also matched.
+
+Live HTML and `sw.js` use `public, max-age=30, must-revalidate`; hashed assets
+use `public, max-age=31536000, immutable`. HTTPS responses include HSTS,
+`nosniff`, strict-origin referrer policy, and restrictive camera/microphone/
+geolocation permissions.
+
+## Known non-blocking gaps
+
+- Registry publishing remains factory-owned; do not publish from this worker.
+  The ready artifact can be produced with `npm pack`.
+- The static host still returns the home document with HTTP 200 for unknown
+  routes and does not set CSP or an anti-framing header. These were explicitly
+  non-blocking in the independent report and were not expanded into this
+  focused repair.
