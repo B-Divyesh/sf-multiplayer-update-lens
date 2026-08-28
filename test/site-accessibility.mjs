@@ -8,13 +8,17 @@ try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const errors = [];
+    const requests = [];
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    page.on("request", (request) => requests.push(request.url()));
     await page.goto(`${baseUrl}${path}`, { waitUntil: "networkidle" });
     const results = await new AxeBuilder({ page }).analyze();
     if (results.violations.length) {
       throw new Error(`${path} axe violations:\n${results.violations.map((item) => `${item.id}: ${item.help} [${item.nodes.map((node) => node.target.join(" ")).join(", ")}]`).join("\n")}`);
     }
     if (errors.length) throw new Error(`${path} console errors:\n${errors.join("\n")}`);
+    const thirdPartyRequests = requests.filter((url) => new URL(url).origin !== new URL(baseUrl).origin);
+    if (thirdPartyRequests.length) throw new Error(`${path} made third-party requests:\n${thirdPartyRequests.join("\n")}`);
     if (await page.locator("h1").count() !== 1) throw new Error(`${path} must have exactly one h1`);
     await context.close();
   }
@@ -39,6 +43,16 @@ try {
   await desktopPage.getByText("marsh-260", { exact: true }).first().waitFor();
   await desktopContext.close();
 
+  const offlineContext = await browser.newContext();
+  const offlinePage = await offlineContext.newPage();
+  await offlinePage.goto(baseUrl, { waitUntil: "networkidle" });
+  await offlinePage.evaluate(() => navigator.serviceWorker.ready);
+  await offlinePage.reload({ waitUntil: "networkidle" });
+  await offlineContext.setOffline(true);
+  await offlinePage.reload({ waitUntil: "domcontentloaded" });
+  await offlinePage.getByRole("heading", { level: 1 }).waitFor();
+  await offlineContext.close();
+
   const paidContext = await browser.newContext();
   await paidContext.route("https://api.sociobot.in/api/v1/products/multiplayer-update-lens/verify**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ valid: true, reason: "ok", expires_at: null }) }));
   const paidPage = await paidContext.newPage();
@@ -53,7 +67,7 @@ try {
   ]);
   await paidPage.getByText("Newest vs previous").waitFor();
   await paidContext.close();
-  console.log("Site accessibility, console, keyboard, seeded sample, paid unlock/import, and 390px layout checks passed.");
+  console.log("Site accessibility, console, keyboard, offline reload, seeded sample, paid unlock/import, and 390px layout checks passed.");
 } finally {
   await browser.close();
 }
