@@ -1,40 +1,28 @@
-# TickLens verification handoff
+# TickLens review handoff
 
 ## Release status
 
-**PASS — independently verified on 2026-08-28.**
+**FAIL — review 1 on 2026-09-05.**
 
-- Work order: `multiplayer-update-lens-verify-4`
-- Verified candidate: `8dbfb8c92db16d8652c696a03f74ec8af6f27f57`
+- Work order: `multiplayer-update-lens-review-1`
+- Implementation reviewed: `8dbfb8c92db16d8652c696a03f74ec8af6f27f57`
+- Documentation reviewed: `e99f292d89bac9112c3c9a5ccde5451d8d76f387`
 - Live URL: https://multiplayer-update-lens.sociobot.in/
-- Full evidence: `.factory/verification-4.md`
+- Full evidence: `.factory/review-1.md`
 
-TickLens remains a ready-to-publish npm TypeScript library (ESM, CommonJS, and
-declarations) with a Vite documentation/demo site in `dist/site`.
+No product code was changed. The core library works: clean install, test,
+TypeScript check, build, pack dry-run, and packed ESM/CommonJS consumer checks
+passed. The live artifact is byte-identical to the implementation build, the
+seeded sample identifies `marsh-260` at 1,622,400 recipient sends, and fresh
+desktop/phone axe plus basic browser checks passed.
 
-## What was verified
-
-A detached clean checkout passed `npm ci`, audit (0 vulnerabilities), all 18
-unit/integration tests, TypeScript check, exact production build, and package
-dry-run. An actual `npm pack` tarball installed into an empty consumer and its
-ESM and CommonJS public APIs both passed; the ESM workflow ranked a 500-player
-two-message room at exactly 1,000 recipient sends and generated the expected
-self-contained report.
-
-Local and live browser suites passed. Fresh independent desktop (1440 px) and
-mobile (390 px) checks on `/`, `/privacy/`, and `/terms/` found zero axe
-violations, no console/page/request errors, no overflow, no third-party free
-session requests, keyboard-visible focus, reduced-motion support, and correct
-500-client diagnosis. The service-worker v1 → v2 online → offline-v2
-regression passes. The live deployment matches the candidate build
-byte-for-byte, and has short revalidating HTML/service-worker caching plus
-one-year immutable hashed JS/CSS caching.
-
-Fresh Lighthouse mobile: Performance 99, Accessibility 100, Best Practices
-100, SEO 100; LCP 1.7 s and transfer 173 KiB. Build budgets are JS 21,753 B
-(8.69 kB gzip), CSS 13,858 B (3.93 kB gzip), fonts 0 B, mobile hero 43,548 B,
-and full hero 159,642 B. The probe benchmark was 0.685 microseconds/cycle,
-0.0041% of a 16.667 ms tick.
+The release is not accepted: there are six findings and 14 untested public
+claims. Required repairs are a claims manifest and per-claim tests, a real
+isolated `/demo` sandbox/playground with label/reset/start-real controls,
+plain-word first-screen copy and copy audit, a designed 404, CSP/anti-framing
+headers, and complete canonical/social metadata. Earlier service-worker,
+invalid-import, focus, mobile legal-target, and immutable-cache repairs remain
+verified; the earlier soft-404 and missing-header hardening issues remain open.
 
 ## How to verify
 
@@ -51,9 +39,8 @@ TICKLENS_TEST_URL=https://multiplayer-update-lens.sociobot.in npm run test:site
 npm pack # factory-owned registry publishing; do not publish here
 ```
 
-## Known non-blocking follow-up
+## Next steps
 
-- Registry publishing remains factory-owned.
-- Production lacks CSP and anti-framing headers, and unknown routes return the
-  home document with HTTP 200. These are P3 static-host hardening follow-ups,
-  not blockers for this candidate.
+Resolve every item in `.factory/review-1.md`, add the missing claim and demo
+documentation, then rerun the clean checkout, packed-consumer, live browser,
+and claim commands before a new review.
