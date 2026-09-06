@@ -2,9 +2,9 @@
 
 ## Direction and rationale
 
-TickLens treats multiplayer rooms as living specimens rather than generic server metrics. The site borrows the calm precision of a botanist's field notebook: labeled stems become network paths, room samples become specimen cards, and a pressed leaf with branching veins explains fanout at a glance. This makes an invisible topology feel inspectable while keeping the profiler itself serious and quiet.
+TickLens uses the calm precision of a botanist's field notebook for its visual system: labeled stems become network paths, room samples appear as carefully sorted records, and a pressed leaf with branching veins explains fanout at a glance. This makes an invisible topology feel inspectable while keeping the profiler itself serious and quiet. The product language stays direct: it names rooms, updates, reports, and recipient sends rather than extending the botanical metaphor into headings or instructions.
 
-This is an explicitly light, paper-based system. The report renderer uses the same tokens so the diagnostic artifact feels like a collected field note, not a dashboard pasted into the site.
+This is an explicitly light, paper-based system. A dark mode would break the paper-report analogy and make the exported report look different from the site, so TickLens paints the light paper background explicitly instead. The report renderer uses the same tokens so the diagnostic artifact feels cohesive without becoming a generic dashboard.
 
 ## Palette
 
@@ -54,3 +54,5 @@ Only explanatory motion is used: hero branches settle once (420ms), chart bars r
 - `site/public/ticklens-herbarium.webp`: original AI-generated hero illustration, generated for this product with `/opt/fleet/lib/gen-image.sh` using the factory `factory-image` deployment, then converted locally to WebP. Prompt: “Botanical scientific field-guide plate on warm ivory paper, a single fictional fern specimen whose central stem is a multiplayer game server and whose branching leaf veins end in small abstract room nodes, subtle copper measurement ticks and handwritten-style specimen marks but absolutely no readable words, no letters, no logos, no UI screenshot, screen-print and colored-pencil texture, restrained deep forest green, sage and burnt ochre ink, asymmetric vertical composition with generous clean negative space on the left for website copy, sophisticated editorial illustration, flat paper lighting, no gradients, 3:2 landscape.” License: original project asset; generated under the factory image service terms.
 - Tiny vein, tick, and leaf marks are hand-authored CSS/SVG geometry. They are decorative or labeled appropriately and contain no third-party material.
 - `ticklens-herbarium-720.webp` is a locally resized responsive derivative of the generated hero, with no further generative edits.
+- `ticklens-share.webp` is a 1200×630 WebP crop derived locally from the original hero illustration for Open Graph and Twitter cards. It contains no text and no third-party material.
+- `apple-touch-icon.png` is a hand-composed raster leaf mark using the same paper, moss, and ochre tokens as the project favicon.

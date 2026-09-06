@@ -1,0 +1,15 @@
+{
+  "slug": "multiplayer-update-lens",
+  "name": "TickLens Field Kit",
+  "price_minor": 2900,
+  "currency": "USD",
+  "price_type": "one_time_price",
+  "return_url": "https://multiplayer-update-lens.sociobot.in/",
+  "price_evidence": "TickLens source offer states $29 one-time for Field Kit. The checkout endpoint returned HTTP 404 on 2026-09-06, so billing registration remains required before purchase is available.",
+  "paid_features": [
+    "Retain up to 30 imported traces in this browser",
+    "Compare the two newest room rankings",
+    "Restore a license on another device you control"
+  ],
+  "license_validation_path": "GET https://api.sociobot.in/api/v1/products/multiplayer-update-lens/verify?license=<token>"
+}

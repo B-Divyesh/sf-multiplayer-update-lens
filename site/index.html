@@ -4,9 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f3eedd">
-    <meta name="description" content="TickLens is a local-first multiplayer room fanout profiler for Socket.IO and WebSocket game servers.">
-    <title>TickLens — see which multiplayer room is multiplying work</title>
+    <meta name="description" content="Find the multiplayer room sending too many updates before CPU use makes the cause clear.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TickLens">
+    <meta property="og:title" content="TickLens — find multiplayer update lag">
+    <meta property="og:description" content="Find the multiplayer room sending too many updates before CPU use makes the cause clear.">
+    <meta property="og:url" content="https://multiplayer-update-lens.sociobot.in/">
+    <meta property="og:image" content="https://multiplayer-update-lens.sociobot.in/ticklens-share.webp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TickLens — find multiplayer update lag">
+    <meta name="twitter:description" content="Find the multiplayer room sending too many updates before CPU use makes the cause clear.">
+    <meta name="twitter:image" content="https://multiplayer-update-lens.sociobot.in/ticklens-share.webp">
+    <title>TickLens — find multiplayer update lag</title>
+    <link rel="canonical" href="https://multiplayer-update-lens.sociobot.in/">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="preload" href="/ticklens-herbarium.webp" imagesrcset="/ticklens-herbarium-720.webp 720w, /ticklens-herbarium.webp 1440w" imagesizes="(max-width: 900px) 100vw, 56vw" as="image" type="image/webp" fetchpriority="high">
     <link rel="stylesheet" href="/src/styles.css">
   </head>
@@ -16,8 +30,9 @@
     <header class="site-header">
       <a class="wordmark" href="/" aria-label="TickLens home"><span class="leaf-mark" aria-hidden="true"></span><span>TickLens</span></a>
       <nav aria-label="Primary navigation">
+        <a href="/demo/">Demo</a>
         <a href="#how">How it works</a>
-        <a href="#field-kit">Field Kit</a>
+        <a href="/privacy/">Privacy</a>
         <a class="nav-install" href="#install">Install <span aria-hidden="true">↓</span></a>
       </nav>
     </header>
@@ -25,59 +40,62 @@
     <main id="main">
       <section class="hero">
         <div class="hero-copy">
-          <p class="kicker"><span>01</span> Multiplayer field diagnostics</p>
-          <h1>Find the room that’s growing wild.</h1>
-          <p class="lede">TickLens reveals the fanout hidden behind a calm CPU graph. Add a tiny probe, run your game, and open one private HTML field note.</p>
+          <p class="kicker"><span>01</span> Multiplayer update check</p>
+          <h1>Find the room causing update lag</h1>
+          <p class="lede">For indie browser-game developers, find the room sending too many updates before CPU use makes the cause clear.</p>
           <div class="hero-actions">
-            <a class="button primary" href="#install">Install TickLens</a>
-            <button class="button secondary" id="run-sample" type="button">Run 500-client sample</button>
+            <a class="button primary" href="/demo/">Run 500-client sample</a>
+            <a class="button secondary" href="#install">Install TickLens</a>
           </div>
-          <p class="microcopy">Zero dependencies · payloads never captured · IDs redacted by default</p>
+          <p class="action-note">The sample shows the highest-fanout room and its recipient sends.</p>
+          <ul class="plain-facts" aria-label="TickLens facts">
+            <li>Free probe and local HTML reports</li>
+            <li>Payload bodies stay out of traces</li>
+            <li>Optional Field Kit: $29 once</li>
+          </ul>
         </div>
         <figure class="hero-plate">
-          <img src="/ticklens-herbarium.webp" srcset="/ticklens-herbarium-720.webp 720w, /ticklens-herbarium.webp 1440w" sizes="(max-width: 900px) 100vw, 56vw" width="1440" height="960" alt="A field-guide fern whose branching veins connect a central game server stem to abstract multiplayer rooms." fetchpriority="high">
-          <figcaption><span>Fig. 01</span> Outbound fanout behaves like branching growth.</figcaption>
+          <img src="/ticklens-herbarium.webp" srcset="/ticklens-herbarium-720.webp 720w, /ticklens-herbarium.webp 1440w" sizes="(max-width: 900px) 100vw, 56vw" width="1440" height="960" alt="A server diagram branching to abstract multiplayer room nodes.">
+          <figcaption><span>Diagram 01</span> One server can send updates to many rooms.</figcaption>
         </figure>
       </section>
 
       <section class="evidence-strip" aria-label="TickLens measurements">
-        <div><strong>Tick duration</strong><span>Spot slow simulation</span></div>
-        <div><strong>Room size</strong><span>See topology pressure</span></div>
-        <div><strong>Bytes + messages</strong><span>Estimate outbound cost</span></div>
-        <div><strong>Fanout</strong><span>Catch accidental N² work</span></div>
+        <div><strong>Tick duration</strong><span>Find slow simulation work</span></div>
+        <div><strong>Room size</strong><span>See which rooms are large</span></div>
+        <div><strong>Bytes and messages</strong><span>Estimate outbound cost</span></div>
+        <div><strong>Recipient sends</strong><span>Find repeated sends</span></div>
       </section>
 
       <section class="sample-section ruled" id="sample" aria-labelledby="sample-title">
         <div class="section-intro">
-          <p class="specimen-index">Specimen A / seeded test</p>
-          <h2 id="sample-title">Five rooms. Five hundred clients. One invasive loop.</h2>
-          <p>The sample models a common failure: every player update is broadcast to every other player in one room. Run it, then read the same ranking an exported trace gives you.</p>
+          <p class="specimen-index">500-client sample</p>
+          <h2 id="sample-title">See a populated room ranking</h2>
+          <p>The sample has five rooms and 500 clients. It flags the 260-player room that sends one update for every player.</p>
         </div>
-        <div id="sample-loading" class="loading-state" hidden role="status"><span aria-hidden="true"></span>Collecting 120 ticks…</div>
-        <div id="sample-empty" class="empty-state">
-          <span class="empty-leaf" aria-hidden="true"></span>
-          <p>No samples pressed yet.</p>
-          <button class="text-button" type="button" data-run-sample>Collect the seeded trace</button>
+        <div class="preview-result">
+          <div><span class="tag">Highest fanout</span><h3>marsh-260</h3><p>Start with the nested send loop in this room.</p></div>
+          <div class="finding-number">1,622,400<small>recipient sends</small></div>
         </div>
-        <div id="sample-report" class="sample-report" hidden aria-live="polite"></div>
+        <p><a class="button primary" href="/demo/">Open the interactive sample</a></p>
       </section>
 
       <section class="method-section" id="how" aria-labelledby="method-title">
         <div class="section-intro">
-          <p class="specimen-index">Method / three cuts</p>
-          <h2 id="method-title">From tick to field note.</h2>
+          <p class="specimen-index">How it works</p>
+          <h2 id="method-title">Measure each room in three steps</h2>
         </div>
         <ol class="steps">
-          <li><span>1</span><div><h3>Wrap each room tick</h3><p>TickLens times the work and records the current room size.</p></div></li>
-          <li><span>2</span><div><h3>Observe the outbound path</h3><p>Use the Socket.IO or WebSocket adapter, or count sends directly.</p></div></li>
-          <li><span>3</span><div><h3>Open one local report</h3><p>The standalone HTML ranks rooms by fanout and keeps raw payloads out.</p></div></li>
+          <li><span>1</span><div><h3>Wrap each room tick</h3><p>TickLens times the work and records the room size.</p></div></li>
+          <li><span>2</span><div><h3>Count outbound updates</h3><p>Use the Socket.IO or WebSocket adapter, or count sends directly.</p></div></li>
+          <li><span>3</span><div><h3>Open the local report</h3><p>The HTML report ranks rooms and leaves payload bodies out.</p></div></li>
         </ol>
       </section>
 
       <section class="install-section ruled" id="install" aria-labelledby="install-title">
         <div class="section-intro">
-          <p class="specimen-index">Installation / Node 18+</p>
-          <h2 id="install-title">Drop it beside your game loop.</h2>
+          <p class="specimen-index">Install · Node 18 or newer</p>
+          <h2 id="install-title">Add the probe to your game loop</h2>
         </div>
         <div class="code-grid">
           <div>
@@ -97,31 +115,32 @@ await lens.tick(room.id, {
 await writeReport(lens, "trace.html");</code></pre>
           </div>
         </div>
-        <p><a class="inline-link" href="https://github.com/B-Divyesh/sf-multiplayer-update-lens">Read the complete Socket.IO and WebSocket API on GitHub <span aria-hidden="true">↗</span></a></p>
+        <p><a class="inline-link" href="https://github.com/B-Divyesh/sf-multiplayer-update-lens">Read the complete Socket.IO and WebSocket API on GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens a new site)</span></a></p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-title">
         <div class="privacy-seal" aria-hidden="true"><span>0</span> payloads</div>
         <div>
-          <p class="specimen-index">A deliberately narrow lens</p>
-          <h2 id="privacy-title">Measure the shape, not the contents.</h2>
-          <p>TickLens estimates packet size and counts recipients. It never stores state payloads, player messages, or socket frames. Room IDs become session-scoped labels unless you explicitly opt out.</p>
+          <p class="specimen-index">Privacy and limits</p>
+          <h2 id="privacy-title">Measure update shape, not contents</h2>
+          <p>TickLens estimates packet size and counts recipients. It does not store state payloads, player messages, or socket frames. Room IDs become session-scoped labels unless you choose otherwise.</p>
+          <p>It does not host games, capture packets, match players, or inspect engine state.</p>
         </div>
       </section>
 
       <section class="field-kit ruled" id="field-kit" aria-labelledby="kit-title">
         <div class="section-intro">
-          <p class="specimen-index">Optional / local team workflow</p>
-          <h2 id="kit-title">Keep the field notes. Compare the seasons.</h2>
-          <p>The open probe and every report stay free. Field Kit adds browser-local trace retention and side-by-side comparison for small teams.</p>
+          <p class="specimen-index">Optional team feature</p>
+          <h2 id="kit-title">Retain and compare local traces</h2>
+          <p>The free probe and reports remain available. Field Kit retains imported reports in this browser and compares the two newest rankings.</p>
         </div>
         <div class="kit-layout">
           <article class="price-card">
             <p class="plan">Field Kit</p>
-            <p class="price"><strong>$29</strong> one-time</p>
-            <ul><li>Save up to 30 traces on this device</li><li>Compare the two newest room rankings</li><li>Use the same license on another device</li></ul>
-            <a id="buy-link" class="button primary full" href="https://api.sociobot.in/api/v1/products/multiplayer-update-lens/checkout">Buy Field Kit</a>
-            <p class="merchant">Secure checkout. Sociobot / Dodo is the merchant of record. Refunds are handled there.</p>
+            <p class="price"><strong>$29</strong> one-time license</p>
+            <ul><li>Save up to 30 traces on this device</li><li>Compare the two newest room rankings</li><li>Restore one license on another device</li></ul>
+            <button id="buy-link" class="button primary full" type="button" disabled aria-describedby="checkout-status">Checkout is not available yet</button>
+            <p id="checkout-status" class="merchant">Checkout registration is pending. Field Kit stays paid and locked until it is available.</p>
           </article>
           <div class="license-panel">
             <div id="license-state" class="license-state" aria-live="polite">Free edition · reports are fully enabled</div>
@@ -130,13 +149,13 @@ await writeReport(lens, "trace.html");</code></pre>
               <div class="license-row"><input id="license-input" name="license" autocomplete="off" spellcheck="false" required><button class="button secondary" type="submit">Verify license</button></div>
             </form>
             <div class="library-panel" id="library-panel" aria-labelledby="library-title">
-              <div class="library-heading"><h3 id="library-title">Local trace library</h3><label class="button secondary upload-button" for="trace-upload">Add report<input id="trace-upload" type="file" accept=".html,.json,text/html,application/json" multiple></label></div>
+              <div class="library-heading"><h3 id="library-title">Local trace library</h3><button id="trace-upload-button" class="button secondary upload-button" type="button">Add report</button><input id="trace-upload" class="trace-upload-input" type="file" accept=".html,.json,text/html,application/json" multiple tabindex="-1" aria-label="Choose TickLens report files"></div>
               <p id="library-help">Unlock Field Kit to retain and compare exported reports in this browser.</p>
               <div id="library-error" class="form-error" role="alert" hidden></div>
               <div id="saved-traces" class="saved-traces"></div>
               <div id="comparison" class="comparison" hidden></div>
             </div>
-            <p class="legal-copy">By purchasing, you agree to the <a href="/terms/">terms</a>. See how the local license is handled in our <a href="/privacy/">privacy notice</a>.</p>
+            <p class="legal-copy">By purchasing, you agree to the <a href="/terms/">terms</a>. Read the <a href="/privacy/">privacy notice</a>.</p>
           </div>
         </div>
       </section>
@@ -144,8 +163,9 @@ await writeReport(lens, "trace.html");</code></pre>
 
     <footer class="site-footer">
       <a class="wordmark" href="/"><span class="leaf-mark" aria-hidden="true"></span><span>TickLens</span></a>
-      <p>Made for rooms that grew faster than expected.</p>
-      <nav aria-label="Legal"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-multiplayer-update-lens">GitHub</a></nav>
+      <p>Find multiplayer update lag before it hides behind CPU use.</p>
+      <nav aria-label="Footer navigation"><a href="/demo/">Demo</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-multiplayer-update-lens">GitHub</a></nav>
+      <small>Built by Param Factory · v0.1.0</small>
     </footer>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script type="module" src="/src/main.ts"></script>

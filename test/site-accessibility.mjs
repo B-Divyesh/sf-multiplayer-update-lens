@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 const baseUrl = process.env.TICKLENS_TEST_URL ?? "http://127.0.0.1:4173";
 const browser = await chromium.launch({ headless: true });
 try {
-  for (const path of ["/", "/privacy/", "/terms/"]) {
+  for (const path of ["/", "/demo/", "/privacy/", "/terms/"]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const errors = [];
@@ -27,10 +27,24 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Run 500-client sample" }).click();
+  await page.evaluate(() => localStorage.setItem("ticklens:field-kit:traces", "real-traces-remain-untouched"));
+  await page.getByRole("link", { name: "Run 500-client sample" }).click();
+  await page.getByText("Demo — sample data, nothing is saved").waitFor();
+  await page.getByText("marsh-260", { exact: true }).first().waitFor();
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await page.getByText("The sample was reset.").waitFor();
+  const demoResetState = await page.evaluate(() => ({
+    real: localStorage.getItem("ticklens:field-kit:traces"),
+    demoKeys: Object.keys(localStorage).filter((key) => key.startsWith("demo:")),
+  }));
+  if (demoResetState.real !== "real-traces-remain-untouched" || demoResetState.demoKeys.length) {
+    throw new Error(`Reset demo changed real storage or left demo data behind: ${JSON.stringify(demoResetState)}`);
+  }
+  await page.getByRole("button", { name: "Run the 500-client sample" }).click();
   await page.getByText("marsh-260", { exact: true }).first().waitFor();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
-  if (overflow) throw new Error("Home page has horizontal overflow at 390px");
+  if (overflow) throw new Error("Demo page has horizontal overflow at 390px");
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
   const purchaseDisclosure = await page.locator(".merchant, .legal-copy").evaluateAll((elements) => elements.map((element) => ({
     className: element.className,
     fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
@@ -54,8 +68,9 @@ try {
   if (!await desktopPage.locator(".skip-link").evaluate((element) => element === document.activeElement)) {
     throw new Error("Skip link is not the first desktop keyboard target");
   }
-  await desktopPage.getByRole("button", { name: "Run 500-client sample" }).focus();
+  await desktopPage.getByRole("link", { name: "Run 500-client sample" }).focus();
   await desktopPage.keyboard.press("Enter");
+  await desktopPage.waitForURL(/\/demo\/$/);
   await desktopPage.getByText("marsh-260", { exact: true }).first().waitFor();
   await desktopContext.close();
 
@@ -127,16 +142,16 @@ try {
   const trace = (room, fanout) => JSON.stringify({ schema: "ticklens-trace", version: 1, generatedAt: new Date().toISOString(), roomIdsRedacted: true, samples: [{ room, timestamp: Date.now(), durationMs: 4, roomSize: 20, messages: 1, bytes: 10, recipients: fanout, fanout, wireBytes: fanout * 10, failed: false }] });
   const pageErrors = [];
   paidPage.on("pageerror", (error) => pageErrors.push(error.message));
-  await paidPage.locator("#trace-upload").focus();
+  await paidPage.locator("#trace-upload-button").focus();
   const uploadFocus = await paidPage.locator(".upload-button").evaluate((label) => ({
     activeId: document.activeElement?.id,
     outline: getComputedStyle(label).outline,
   }));
-  if (uploadFocus.activeId !== "trace-upload" || !uploadFocus.outline.includes("rgb(184, 106, 34)")) {
+  if (uploadFocus.activeId !== "trace-upload-button" || !uploadFocus.outline.includes("rgb(184, 106, 34)")) {
     throw new Error("The unlocked Add report control has no visible keyboard focus indicator");
   }
   const chooser = paidPage.waitForEvent("filechooser");
-  await paidPage.keyboard.press("Enter");
+  await paidPage.locator("#trace-upload-button").press("Enter");
   await chooser;
   await paidPage.locator("#trace-upload").setInputFiles([
     { name: "valid-but-not-saved.json", mimeType: "application/json", buffer: Buffer.from(trace("room-valid", 20)) },

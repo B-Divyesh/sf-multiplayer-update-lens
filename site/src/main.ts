@@ -1,6 +1,5 @@
-import { createProbe } from "../../src/probe";
-import { summarizeRooms } from "../../src/report";
 import type { TickTrace } from "../../src/types";
+import { summarizeRooms } from "../../src/report";
 import { validateTrace } from "./trace-validation";
 
 const PRODUCT_SLUG = "multiplayer-update-lens";
@@ -18,65 +17,6 @@ const byId = <T extends HTMLElement>(id: string): T => {
   if (!element) throw new Error(`Missing #${id}`);
   return element as T;
 };
-
-const sampleReport = byId("sample-report");
-const sampleEmpty = byId("sample-empty");
-const sampleLoading = byId("sample-loading");
-let sampleHtml = "";
-
-for (const button of document.querySelectorAll<HTMLElement>("#run-sample, [data-run-sample]")) {
-  button.addEventListener("click", () => void runSample());
-}
-
-async function runSample(): Promise<void> {
-  sampleEmpty.hidden = true;
-  sampleReport.hidden = true;
-  sampleLoading.hidden = false;
-  for (const button of document.querySelectorAll<HTMLButtonElement>("#run-sample, [data-run-sample]")) button.disabled = true;
-  await new Promise((resolve) => window.setTimeout(resolve, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 280));
-
-  let clock = 0;
-  const lens = createProbe({ serverName: "Seeded 500-client grove", redactRoomIds: false, clock: () => clock });
-  const rooms = [
-    { name: "atrium-46", size: 46, ms: 2.2, messages: 1, bytes: 340 },
-    { name: "canopy-74", size: 74, ms: 3.1, messages: 2, bytes: 410 },
-    { name: "estuary-80", size: 80, ms: 3.5, messages: 1, bytes: 620 },
-    { name: "marsh-260", size: 260, ms: 7.4, messages: 260, bytes: 96 },
-    { name: "nursery-40", size: 40, ms: 1.8, messages: 3, bytes: 260 },
-  ];
-  for (let tick = 0; tick < 24; tick += 1) {
-    for (const room of rooms) {
-      const end = lens.startTick(room.name, { roomSize: room.size, timestamp: Date.now() + tick * 50 });
-      lens.recordOutbound(room.name, { bytes: room.bytes, messages: room.messages, recipients: room.size });
-      clock += room.ms + (tick % 4) * 0.12;
-      end();
-    }
-  }
-  const trace = lens.snapshot();
-  const summaries = summarizeRooms(trace.samples);
-  const top = summaries[0];
-  if (!top) return;
-  sampleHtml = lens.toHTML({ title: "Seeded 500-client trace" });
-  sampleReport.innerHTML = `
-    <div class="finding-card"><div><span class="tag">Highest fanout</span><h3>${escapeHtml(top.room)}</h3><p>The 260-player room broadcasts one update per player to the whole room. Start with its nested send loop.</p></div><div class="finding-number">${format(top.fanout)}<small>recipient sends</small></div></div>
-    <div class="table-scroll" tabindex="0" aria-label="Seeded room measurements"><table class="data-table"><caption>120 sampled ticks, sorted by total fanout</caption><thead><tr><th scope="col">Room</th><th scope="col">Players</th><th scope="col">p95 tick</th><th scope="col">Messages</th><th scope="col">Fanout</th><th scope="col">Est. wire</th></tr></thead><tbody>${summaries.map((room) => `<tr><th scope="row">${escapeHtml(room.room)}</th><td>${room.roomSize}</td><td>${room.p95Ms.toFixed(2)} ms</td><td>${format(room.messages)}</td><td><strong>${format(room.fanout)}</strong></td><td>${formatBytes(room.wireBytes)}</td></tr>`).join("")}</tbody></table></div>
-    <div class="report-actions"><button id="download-sample" class="button primary" type="button">Download self-contained report</button><button class="button secondary" type="button" data-run-sample>Run sample again</button></div>`;
-  sampleLoading.hidden = true;
-  sampleReport.hidden = false;
-  for (const button of document.querySelectorAll<HTMLButtonElement>("#run-sample")) button.disabled = false;
-  byId("download-sample").addEventListener("click", downloadSample);
-  sampleReport.querySelector<HTMLElement>("[data-run-sample]")?.addEventListener("click", () => void runSample());
-}
-
-function downloadSample(): void {
-  const url = URL.createObjectURL(new Blob([sampleHtml], { type: "text/html" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "ticklens-seeded-trace.html";
-  anchor.click();
-  URL.revokeObjectURL(url);
-  toast("Report downloaded. It opens offline in any browser.");
-}
 
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy], [data-copy-target]")) {
   button.addEventListener("click", async () => {
@@ -104,7 +44,7 @@ const licenseState = byId("license-state");
 const licenseForm = byId<HTMLFormElement>("license-form");
 const licenseInput = byId<HTMLInputElement>("license-input");
 const traceUpload = byId<HTMLInputElement>("trace-upload");
-const uploadButton = document.querySelector<HTMLElement>(".upload-button");
+const uploadButton = byId<HTMLButtonElement>("trace-upload-button");
 let unlocked = false;
 
 licenseForm.addEventListener("submit", (event) => {
@@ -118,6 +58,7 @@ licenseForm.addEventListener("submit", (event) => {
 });
 
 traceUpload.addEventListener("change", () => void importTraces(traceUpload.files));
+uploadButton.addEventListener("click", () => traceUpload.click());
 
 async function initializeLicense(): Promise<void> {
   const url = new URL(location.href);
@@ -164,7 +105,7 @@ function setUnlocked(value: boolean, message: string, tone = ""): void {
   licenseState.className = `license-state ${tone}`.trim();
   licenseState.textContent = message;
   traceUpload.disabled = !value;
-  uploadButton?.setAttribute("aria-disabled", String(!value));
+  uploadButton.disabled = !value;
   byId("library-help").textContent = value ? "Reports stay on this device. Import the self-contained HTML file produced by TickLens." : "Unlock Field Kit to retain and compare exported reports in this browser.";
   renderLibrary();
 }

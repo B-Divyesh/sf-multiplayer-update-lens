@@ -38,6 +38,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:site": "node test/site-accessibility.mjs",
+    "test:claims": "node test/claims.mjs",
     "check": "tsc --noEmit",
     "pack:check": "npm pack --dry-run"
   },

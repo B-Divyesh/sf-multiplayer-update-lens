@@ -1,0 +1,107 @@
+[
+  {
+    "id": "zero-dependencies",
+    "claim": "The TickLens npm package has zero runtime dependencies.",
+    "where": "README",
+    "test": "npm run build && npm run test:claims -- --grep @claim:zero-dependencies",
+    "sandbox": "Build the publishable package, dry-run npm pack, and inspect the package that consumers install."
+  },
+  {
+    "id": "payloads-never-captured",
+    "claim": "TickLens never captures outbound payload bodies.",
+    "where": "landing page, README, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:payloads-never-captured",
+    "sandbox": "Instrument a Socket.IO broadcast containing a sentinel payload; assert the sent packet remains intact while the snapshot and HTML report omit it."
+  },
+  {
+    "id": "room-ids-redacted",
+    "claim": "TickLens redacts room IDs by default.",
+    "where": "landing page, README, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:room-ids-redacted",
+    "sandbox": "Record a private room ID and assert the snapshot uses one stable room label without the source ID."
+  },
+  {
+    "id": "sample-export-ranking",
+    "claim": "The 500-client sample and its exported trace name the same highest-fanout room.",
+    "where": "demo",
+    "test": "npm run build && npm run test:claims -- --grep @claim:sample-export-ranking",
+    "sandbox": "Open /demo, download its report, and compare the visible result and downloaded report."
+  },
+  {
+    "id": "demo-playground-private",
+    "claim": "The demo playground does not send or save the values you enter.",
+    "where": "demo, README",
+    "test": "npm run build && npm run test:claims -- --grep @claim:demo-playground-private",
+    "sandbox": "Enter a private room label and measurements, inspect browser storage, and record every request from the demo page."
+  },
+  {
+    "id": "standalone-report-offline",
+    "claim": "A self-contained TickLens report opens offline.",
+    "where": "README, demo download notice",
+    "test": "npm run build && npm run test:claims -- --grep @claim:standalone-report-offline",
+    "sandbox": "Open a generated report in a fresh browser context, disable network access, reload, and read the finding."
+  },
+  {
+    "id": "outbound-content-not-stored",
+    "claim": "TickLens does not store state payloads, player messages, or socket frames.",
+    "where": "landing page, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:outbound-content-not-stored",
+    "sandbox": "Instrument a WebSocket send with a sentinel frame and assert neither snapshot nor report retains its contents."
+  },
+  {
+    "id": "session-scoped-labels",
+    "claim": "Default room labels are session-scoped.",
+    "where": "landing page, README",
+    "test": "npm run build && npm run test:claims -- --grep @claim:session-scoped-labels",
+    "sandbox": "Record the same source room in two probes and assert each receives a redacted label that differs by session."
+  },
+  {
+    "id": "field-kit-browser-local",
+    "claim": "Field Kit keeps retained traces in this browser.",
+    "where": "landing page, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:field-kit-browser-local",
+    "sandbox": "Use a recorded valid license response, import a report, observe browser storage, and record outgoing requests."
+  },
+  {
+    "id": "field-kit-thirty-traces",
+    "claim": "Field Kit saves up to 30 traces on this device.",
+    "where": "Field Kit offer",
+    "test": "npm run build && npm run test:claims -- --grep @claim:field-kit-thirty-traces",
+    "sandbox": "Import 31 valid reports after a recorded valid license response and count the retained reports."
+  },
+  {
+    "id": "field-kit-comparison",
+    "claim": "Field Kit compares the two newest room rankings.",
+    "where": "Field Kit offer",
+    "test": "npm run build && npm run test:claims -- --grep @claim:field-kit-comparison",
+    "sandbox": "Import two reports after a recorded valid license response and inspect the visible comparison."
+  },
+  {
+    "id": "license-other-device",
+    "claim": "A Field Kit license can be restored on another device you control.",
+    "where": "Field Kit offer, terms",
+    "test": "npm run build && npm run test:claims -- --grep @claim:license-other-device",
+    "sandbox": "Paste one recorded valid license into two fresh browser contexts and verify the local unlock each time."
+  },
+  {
+    "id": "traces-memory-until-export",
+    "claim": "Library traces remain in memory until your code exports them.",
+    "where": "README, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:traces-memory-until-export",
+    "sandbox": "Record a trace in a new temporary directory, inspect it before export, then verify writeReport creates the requested file."
+  },
+  {
+    "id": "library-no-telemetry",
+    "claim": "The TickLens library makes no telemetry or network requests.",
+    "where": "README, privacy page",
+    "test": "npm run build && npm run test:claims -- --grep @claim:library-no-telemetry",
+    "sandbox": "Run probe measurement and report rendering with network access trapped, then assert no request was attempted."
+  },
+  {
+    "id": "offline-update",
+    "claim": "The documentation site updates its cached release and still reloads offline.",
+    "where": "README",
+    "test": "npm run build && npm run test:claims -- --grep @claim:offline-update",
+    "sandbox": "Install the worker on v1, update its origin to v2, reload online, disable the network, and confirm v2 reloads."
+  }
+]

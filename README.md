@@ -12,6 +12,17 @@ npm install multiplayer-update-lens
 
 TickLens ships ESM, CommonJS, and TypeScript declarations. It requires Node 18 or newer.
 
+## Try the 500-client sample
+
+Open [the TickLens demo](https://multiplayer-update-lens.sociobot.in/demo/), or
+choose **Run 500-client sample** on the site. It loads five seeded rooms and
+shows `marsh-260` at 1,622,400 recipient sends. The persistent demo label
+explains that the sample is isolated. Resetting clears only `demo:ticklens:`
+browser storage and does not change Field Kit data or a stored license.
+
+The demo also includes an editable fanout playground. It uses the same public
+probe API as the package and does not send or save the values you enter.
+
 ## Usage
 
 Wrap the work for each room, and count outbound updates where you send them:
@@ -86,15 +97,27 @@ Open the exported file directly. “Highest fanout” identifies the room doing 
 ## Local development
 
 ```sh
-npm install
+npm ci
 npm test
 npm run build
 npm pack --dry-run
+npm run test:claims
 ```
 
 - `npm run build` creates the publishable library and the static site at `dist/site/index.html`.
 - `npm run dev` runs the documentation/demo site.
 - `npm test` runs the documented examples and core/adapter/report tests.
+- `npm run test:site` runs browser accessibility, mobile, demo-isolation,
+  offline-update, keyboard, and paid-unlock checks against a running site.
+- `npm run test:claims` runs every outcome check listed in
+  `.factory/claims.json`. It needs `npm run build` first.
+
+Run the browser suite in a second terminal after starting the site:
+
+```sh
+npm run dev -- --host 127.0.0.1 --port 4173
+TICKLENS_TEST_URL=http://127.0.0.1:4173 npm run test:site
+```
 
 ### Static-site deployment
 
@@ -104,6 +127,14 @@ immutable cache lifetime, while HTML and `sw.js` retain a short revalidating
 policy so releases and offline updates become visible promptly. The service
 worker uses network-first navigation with a cached offline fallback, so an
 already-installed worker cannot hold a client on an earlier HTML deployment.
+
+`staticwebapp.config.json` also sends a content security policy and deny-frame
+headers. It preserves an HTTP 404 while rewriting unknown paths to the designed
+`/404.html` page.
+
+The factory deploys the built `dist/site` directory to the TickLens static
+application. Do not publish the npm package from a local checkout; use
+`npm pack` to prepare the factory-owned registry artifact.
 
 ## Privacy and scope
 

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f3eedd">
+    <meta name="description" content="Run a 500-client TickLens sample and inspect the room causing outbound fanout lag.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TickLens">
+    <meta property="og:title" content="Demo — TickLens">
+    <meta property="og:description" content="Run a 500-client sample and inspect the highest-fanout room.">
+    <meta property="og:url" content="https://multiplayer-update-lens.sociobot.in/demo/">
+    <meta property="og:image" content="https://multiplayer-update-lens.sociobot.in/ticklens-share.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Demo — TickLens">
+    <meta name="twitter:description" content="Run a 500-client sample and inspect the highest-fanout room.">
+    <meta name="twitter:image" content="https://multiplayer-update-lens.sociobot.in/ticklens-share.webp">
+    <title>Demo — TickLens</title>
+    <link rel="canonical" href="https://multiplayer-update-lens.sociobot.in/demo/">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="/src/styles.css">
+  </head>
+  <body class="demo-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="TickLens home"><span class="leaf-mark" aria-hidden="true"></span><span>TickLens</span></a>
+      <nav aria-label="Primary navigation"><a href="/">Home</a><a href="#playground">Playground</a><a href="/privacy/">Privacy</a></nav>
+    </header>
+    <main id="main">
+      <section class="demo-shell" aria-labelledby="demo-title">
+        <div class="demo-banner" role="status"><span>Demo — sample data, nothing is saved</span><span class="demo-controls"><button id="reset-demo" type="button">Reset demo</button><button id="start-real" type="button">Start for real</button></span></div>
+        <p class="specimen-index">500-client sample</p>
+        <h1 id="demo-title" tabindex="-1">Find the room causing update lag</h1>
+        <p class="lede">For indie browser-game developers, this sample finds the room sending too many updates before CPU use makes the cause clear.</p>
+        <div class="demo-actions"><button id="run-sample" class="button primary" type="button">Run 500-client sample</button><span>See the highest-fanout room and recipient sends.</span></div>
+        <div id="sample-loading" class="loading-state" hidden role="status"><span aria-hidden="true"></span>Building the 120-tick sample…</div>
+        <div id="sample-empty" class="empty-state" hidden><p>The sample was reset.</p><button class="text-button" type="button" data-run-sample>Run the 500-client sample</button></div>
+        <div id="sample-report" class="sample-report" aria-live="polite"></div>
+      </section>
+
+      <section class="playground-section ruled" id="playground" aria-labelledby="playground-title">
+        <div class="section-intro"><p class="specimen-index">Editable playground</p><h2 id="playground-title">Change one room and see its fanout</h2><p>This playground calls TickLens’s public probe API in your browser. It does not send or save your values.</p></div>
+        <form id="playground-form" class="playground-form">
+          <div><label for="playground-room">Room label</label><input id="playground-room" name="room" value="arena-260" maxlength="48" required></div>
+          <div><label for="playground-players">Players in room</label><input id="playground-players" name="players" type="number" min="1" max="5000" value="260" required></div>
+          <div><label for="playground-messages">Updates per tick</label><input id="playground-messages" name="messages" type="number" min="1" max="5000" value="260" required></div>
+          <div><label for="playground-bytes">Bytes per update</label><input id="playground-bytes" name="bytes" type="number" min="0" max="1000000" value="96" required></div>
+        </form>
+        <output id="playground-output" class="playground-output" aria-live="polite"></output>
+        <div class="code-grid playground-code"><div><div class="code-heading"><span>Copy-paste start</span></div><pre tabindex="0"><code>import { createProbe } from "multiplayer-update-lens";
+
+const lens = createProbe();
+lens.recordOutbound(room.id, {
+  messages: 1,
+  bytes: 280,
+  recipients: room.players.length,
+});</code></pre></div></div>
+      </section>
+    </main>
+    <footer class="site-footer"><a class="wordmark" href="/"><span class="leaf-mark" aria-hidden="true"></span><span>TickLens</span></a><p>Find multiplayer update lag before it hides behind CPU use.</p><nav aria-label="Footer navigation"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav><small>Built by Param Factory · v0.1.0</small></footer>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/src/demo.ts"></script>
+  </body>
+</html>
