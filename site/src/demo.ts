@@ -131,3 +131,7 @@ function formatBytes(bytes: number): string { return bytes < 1024 ** 2 ? `${(byt
 
 updatePlayground();
 void runSample(false);
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => { void navigator.serviceWorker.register("/sw.js"); });
+}

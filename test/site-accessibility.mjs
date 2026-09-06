@@ -84,6 +84,16 @@ try {
   await offlinePage.getByRole("heading", { level: 1 }).waitFor();
   await offlineContext.close();
 
+  const demoOfflineContext = await browser.newContext();
+  const demoOfflinePage = await demoOfflineContext.newPage();
+  await demoOfflinePage.goto(`${baseUrl}/demo/`, { waitUntil: "networkidle" });
+  await demoOfflinePage.evaluate(() => navigator.serviceWorker.ready);
+  await demoOfflinePage.reload({ waitUntil: "networkidle" });
+  await demoOfflineContext.setOffline(true);
+  await demoOfflinePage.reload({ waitUntil: "domcontentloaded" });
+  await demoOfflinePage.getByRole("heading", { name: "marsh-260" }).waitFor();
+  await demoOfflineContext.close();
+
   const updateServer = await startUpdateServer();
   try {
     const updateContext = await browser.newContext();
