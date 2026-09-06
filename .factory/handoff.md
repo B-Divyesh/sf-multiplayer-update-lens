@@ -5,7 +5,7 @@
 **Implemented and deployed on 2026-09-06.**
 
 - Work order: `multiplayer-update-lens-repair-4`
-- Implementation SHA: `01a72ea1be51aad12866560233ee99bce53c8421`
+- Implementation SHA: `897426331a0c566a73dd57702dc3d7f336d8276a`
 - Documentation SHA: this report-only handoff commit (reported with delivery)
 - Live URL: https://multiplayer-update-lens.sociobot.in/
 - Demo URL: https://multiplayer-update-lens.sociobot.in/demo/
@@ -23,7 +23,8 @@ terms, 404, service worker, social image, and each hashed JS/CSS asset.
   **Demo — sample data, nothing is saved** banner, Reset demo, Start for real,
   an immediately populated `marsh-260` result (1,622,400 recipient sends),
   and an editable live fanout playground. Demo state uses only the
-  `demo:ticklens:` namespace.
+  `demo:ticklens:` namespace. A direct demo visit registers the offline shell,
+  so it remains usable after one online demo visit.
 - Added `.factory/demo.md`, `.factory/claims.json` (15 outcome claims), and
   claim checks that exercise the built package and the browser sandbox.
 - Added an actual `404.html`. Production unknown routes now return HTTP 404,
@@ -84,7 +85,8 @@ Results:
 - Local and live `npm run test:site` passed. It includes axe checks on home,
   demo, privacy, and terms; phone layout; fresh demo entry/reset isolation;
   keyboard/focus; invalid-import recovery; paid unlock fixture; service-worker
-  current-release offline reload; and v1 → v2 → offline-v2 cache retention.
+  current-release home and direct-demo offline reload; and v1 → v2 → offline-v2
+  cache retention.
 - `/opt/fleet/lib/verify-url.sh` passed live: 200, 675 ms load, no browser
   errors, title/lang/H1/main present, all images labeled, and no unnamed
   buttons.
